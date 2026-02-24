@@ -41,14 +41,19 @@ export default function DashboardOverview({ courses, students, templates, remind
         ))}
       </div>
 
-      {courses.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">即將上課</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {courses.slice(0, 5).map((course) => {
+      {(() => {
+        const today = new Date().toISOString().split("T")[0];
+        const upcoming = courses
+          .filter((c) => c.date >= today)
+          .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+        return upcoming.length > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">即將上課</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {upcoming.slice(0, 5).map((course) => {
                 const studentCount = students.filter((s) => s.courseId === course.id).length;
                 return (
                   <div key={course.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
@@ -72,7 +77,8 @@ export default function DashboardOverview({ courses, students, templates, remind
             </div>
           </CardContent>
         </Card>
-      )}
+        ) : null;
+      })()}
     </div>
   );
 }
