@@ -6,6 +6,7 @@ export interface Course {
   time: string;
   location: string;
   totalSessions: number;
+  completedSessions: number;
 }
 
 export interface Student {
