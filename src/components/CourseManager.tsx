@@ -16,14 +16,16 @@ interface Props {
   deleteCourse: (id: string) => void;
 }
 
-const emptyCourse = { name: "", type: "", date: "", time: "", location: "", totalSessions: 1 };
+const emptyCourse = { name: "", type: "", date: "", time: "", location: "", totalSessions: 1, completedSessions: 0 };
 
 function isCourseExpired(course: Course): boolean {
   const courseDateTime = new Date(`${course.date}T${course.time || "00:00:00"}`);
   return !Number.isNaN(courseDateTime.getTime()) && courseDateTime < new Date();
 }
 
-function CourseCard({ course, onEdit, onDelete }: { course: Course; onEdit: () => void; onDelete: () => void }) {
+function CourseCard({ course, onEdit, onDelete, onUpdateSessions }: { course: Course; onEdit: () => void; onDelete: () => void; onUpdateSessions: (completed: number) => void }) {
+  const progress = course.totalSessions > 0 ? Math.round((course.completedSessions / course.totalSessions) * 100) : 0;
+
   return (
     <Card className="group hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -56,9 +58,39 @@ function CourseCard({ course, onEdit, onDelete }: { course: Course; onEdit: () =
           <span>{course.time}</span>
         </div>
         {course.totalSessions > 1 && (
-          <div className="flex items-center gap-2">
-            <Hash className="w-4 h-4" />
-            <span>共 {course.totalSessions} 堂</span>
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                <Hash className="w-4 h-4" />
+                已上 {course.completedSessions}/{course.totalSessions} 堂
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-6 w-6"
+                  disabled={course.completedSessions <= 0}
+                  onClick={(e) => { e.stopPropagation(); onUpdateSessions(course.completedSessions - 1); }}
+                >
+                  <span className="text-xs font-bold">−</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-6 w-6"
+                  disabled={course.completedSessions >= course.totalSessions}
+                  onClick={(e) => { e.stopPropagation(); onUpdateSessions(course.completedSessions + 1); }}
+                >
+                  <span className="text-xs font-bold">+</span>
+                </Button>
+              </div>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2">
+              <div
+                className="bg-primary rounded-full h-2 transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
           </div>
         )}
         {course.location && (
@@ -94,7 +126,7 @@ export default function CourseManager({ courses, addCourse, updateCourse, delete
   };
 
   const handleEdit = (course: Course) => {
-    setForm({ name: course.name, type: course.type, date: course.date, time: course.time, location: course.location, totalSessions: course.totalSessions });
+    setForm({ name: course.name, type: course.type, date: course.date, time: course.time, location: course.location, totalSessions: course.totalSessions, completedSessions: course.completedSessions });
     setEditingId(course.id);
     setOpen(true);
   };
@@ -187,6 +219,7 @@ export default function CourseManager({ courses, addCourse, updateCourse, delete
                   course={course}
                   onEdit={() => handleEdit(course)}
                   onDelete={() => deleteCourse(course.id)}
+                  onUpdateSessions={(n) => updateCourse(course.id, { completedSessions: n })}
                 />
               ))}
             </div>
@@ -217,6 +250,7 @@ export default function CourseManager({ courses, addCourse, updateCourse, delete
                   course={course}
                   onEdit={() => handleEdit(course)}
                   onDelete={() => deleteCourse(course.id)}
+                  onUpdateSessions={(n) => updateCourse(course.id, { completedSessions: n })}
                 />
               ))}
             </div>
