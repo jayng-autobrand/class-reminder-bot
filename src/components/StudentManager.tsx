@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, Users, Phone, Mail } from "lucide-react";
+import { ExportStudentsButton, ImportStudentsButton } from "@/components/GoogleSheetsActions";
 
 interface Props {
   students: Student[];
@@ -58,7 +59,7 @@ export default function StudentManager({ students, courses, addStudent, updateSt
           <h2 className="text-2xl font-bold text-foreground">學員名單</h2>
           <p className="text-muted-foreground mt-1">管理各課程的學員資料</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <Select value={filterCourse} onValueChange={setFilterCourse}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="篩選課程" />
@@ -70,6 +71,8 @@ export default function StudentManager({ students, courses, addStudent, updateSt
               ))}
             </SelectContent>
           </Select>
+          <ImportStudentsButton onImport={async (items) => { for (const s of items) await addStudent(s); }} courses={courses} />
+          <ExportStudentsButton students={students} courses={courses} />
           <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
               <Button><Plus className="w-4 h-4 mr-2" />新增學員</Button>
