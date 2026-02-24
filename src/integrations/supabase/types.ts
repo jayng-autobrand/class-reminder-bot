@@ -225,6 +225,51 @@ export type Database = {
           },
         ]
       }
+      sync_settings: {
+        Row: {
+          access_token: string
+          client_id: string
+          client_secret: string
+          created_at: string
+          expires_at: number
+          id: string
+          last_synced_at: string | null
+          refresh_token: string
+          sheet_url: string
+          sync_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string
+          client_id?: string
+          client_secret?: string
+          created_at?: string
+          expires_at?: number
+          id?: string
+          last_synced_at?: string | null
+          refresh_token?: string
+          sheet_url?: string
+          sync_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          client_id?: string
+          client_secret?: string
+          created_at?: string
+          expires_at?: number
+          id?: string
+          last_synced_at?: string | null
+          refresh_token?: string
+          sheet_url?: string
+          sync_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
