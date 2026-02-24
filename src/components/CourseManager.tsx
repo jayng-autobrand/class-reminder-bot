@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, BookOpen, MapPin, Clock, Calendar } from "lucide-react";
+import { Plus, Pencil, Trash2, BookOpen, MapPin, Clock, Calendar, Hash, Archive, ChevronDown, ChevronUp } from "lucide-react";
 import { formatDateDDMMYYYY } from "@/lib/dateFormat";
 import { ExportCoursesButton, ImportCoursesButton } from "@/components/GoogleSheetsActions";
 
@@ -16,12 +16,70 @@ interface Props {
   deleteCourse: (id: string) => void;
 }
 
-const emptyCourse = { name: "", type: "", date: "", time: "", location: "" };
+const emptyCourse = { name: "", type: "", date: "", time: "", location: "", totalSessions: 1 };
+
+function isCourseExpired(course: Course): boolean {
+  const courseDateTime = new Date(`${course.date}T${course.time || "00:00:00"}`);
+  return !Number.isNaN(courseDateTime.getTime()) && courseDateTime < new Date();
+}
+
+function CourseCard({ course, onEdit, onDelete }: { course: Course; onEdit: () => void; onDelete: () => void }) {
+  return (
+    <Card className="group hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle className="text-lg">{course.name}</CardTitle>
+            {course.type && (
+              <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-secondary text-secondary-foreground">
+                {course.type}
+              </span>
+            )}
+          </div>
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}>
+              <Pencil className="w-3.5 h-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onDelete}>
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4" />
+          <span>{formatDateDDMMYYYY(course.date)}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4" />
+          <span>{course.time}</span>
+        </div>
+        {course.totalSessions > 1 && (
+          <div className="flex items-center gap-2">
+            <Hash className="w-4 h-4" />
+            <span>共 {course.totalSessions} 堂</span>
+          </div>
+        )}
+        {course.location && (
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4" />
+            <span className="truncate">{course.location}</span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function CourseManager({ courses, addCourse, updateCourse, deleteCourse }: Props) {
   const [form, setForm] = useState(emptyCourse);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+
+  const activeCourses = courses.filter((c) => !isCourseExpired(c));
+  const archivedCourses = courses.filter((c) => isCourseExpired(c));
 
   const handleSave = () => {
     if (!form.name || !form.date || !form.time) return;
@@ -36,7 +94,7 @@ export default function CourseManager({ courses, addCourse, updateCourse, delete
   };
 
   const handleEdit = (course: Course) => {
-    setForm({ name: course.name, type: course.type, date: course.date, time: course.time, location: course.location });
+    setForm({ name: course.name, type: course.type, date: course.date, time: course.time, location: course.location, totalSessions: course.totalSessions });
     setEditingId(course.id);
     setOpen(true);
   };
@@ -90,6 +148,16 @@ export default function CourseManager({ courses, addCourse, updateCourse, delete
                 </div>
               </div>
               <div>
+                <Label>總堂數</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.totalSessions}
+                  onChange={(e) => setForm({ ...form, totalSessions: Math.max(1, parseInt(e.target.value) || 1) })}
+                  placeholder="例如：7"
+                />
+              </div>
+              <div>
                 <Label>地點 / Zoom Link</Label>
                 <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="例如：Room 101 或 Zoom link" />
               </div>
@@ -100,7 +168,8 @@ export default function CourseManager({ courses, addCourse, updateCourse, delete
         </div>
       </div>
 
-      {courses.length === 0 ? (
+      {/* Active Courses */}
+      {activeCourses.length === 0 && archivedCourses.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <BookOpen className="w-12 h-12 text-muted-foreground mb-4" />
@@ -109,47 +178,49 @@ export default function CourseManager({ courses, addCourse, updateCourse, delete
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {courses.map((course) => (
-            <Card key={course.id} className="group hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{course.name}</CardTitle>
-                    {course.type && (
-                      <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-secondary text-secondary-foreground">
-                        {course.type}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(course)}>
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteCourse(course.id)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>{formatDateDDMMYYYY(course.date)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  <span>{course.time}</span>
-                </div>
-                {course.location && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    <span className="truncate">{course.location}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+        <>
+          {activeCourses.length > 0 && (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {activeCourses.map((course) => (
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  onEdit={() => handleEdit(course)}
+                  onDelete={() => deleteCourse(course.id)}
+                />
+              ))}
+            </div>
+          )}
+          {activeCourses.length === 0 && archivedCourses.length > 0 && (
+            <p className="text-muted-foreground">目前冇進行中嘅課程</p>
+          )}
+        </>
+      )}
+
+      {/* Archived Courses */}
+      {archivedCourses.length > 0 && (
+        <div className="space-y-4">
+          <Button
+            variant="ghost"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+            onClick={() => setShowArchived(!showArchived)}
+          >
+            <Archive className="w-4 h-4" />
+            已完成課程 ({archivedCourses.length})
+            {showArchived ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </Button>
+          {showArchived && (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 opacity-60">
+              {archivedCourses.map((course) => (
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  onEdit={() => handleEdit(course)}
+                  onDelete={() => deleteCourse(course.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

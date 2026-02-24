@@ -22,7 +22,7 @@ export function useAppState() {
       ]);
 
       if (cRes.data) setCourses(cRes.data.map((c: any) => ({
-        id: c.id, name: c.name, type: c.type || '', date: c.date, time: c.time, location: c.location || '',
+        id: c.id, name: c.name, type: c.type || '', date: c.date, time: c.time, location: c.location || '', totalSessions: c.total_sessions ?? 1,
       })));
       if (sRes.data) setStudents(sRes.data.map((s: any) => ({
         id: s.id, name: s.name, phone: s.phone, email: s.email || '', courseId: s.course_id,
@@ -47,10 +47,10 @@ export function useAppState() {
   // --- Courses ---
   const addCourse = async (course: Omit<Course, "id">) => {
     const { data, error } = await supabase.from('courses').insert({
-      name: course.name, type: course.type, date: course.date, time: course.time, location: course.location,
+      name: course.name, type: course.type, date: course.date, time: course.time, location: course.location, total_sessions: course.totalSessions ?? 1,
     }).select().single();
     if (error) { toast({ title: "錯誤", description: error.message, variant: "destructive" }); return; }
-    setCourses(prev => [...prev, { id: data.id, name: data.name, type: data.type, date: data.date, time: data.time, location: data.location }]);
+    setCourses(prev => [...prev, { id: data.id, name: data.name, type: data.type, date: data.date, time: data.time, location: data.location, totalSessions: data.total_sessions ?? 1 }]);
   };
 
   const updateCourse = async (id: string, updates: Partial<Course>) => {
@@ -60,6 +60,7 @@ export function useAppState() {
     if (updates.date !== undefined) dbUpdates.date = updates.date;
     if (updates.time !== undefined) dbUpdates.time = updates.time;
     if (updates.location !== undefined) dbUpdates.location = updates.location;
+    if (updates.totalSessions !== undefined) dbUpdates.total_sessions = updates.totalSessions;
     const { error } = await supabase.from('courses').update(dbUpdates).eq('id', id);
     if (error) { toast({ title: "錯誤", description: error.message, variant: "destructive" }); return; }
     setCourses(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));

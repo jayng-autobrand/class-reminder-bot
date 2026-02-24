@@ -102,7 +102,7 @@ export function ImportCoursesButton({ onImport }: ImportCoursesProps) {
       const rows = await googleSheets.readSheet(id, `${sheetName}`);
       if (rows.length < 2) { toast({ title: "無資料", description: "試算表無有效資料列", variant: "destructive" }); return; }
       const courses: Omit<Course, "id">[] = rows.slice(1).map((r) => ({
-        name: r[0] || "", type: r[1] || "", date: r[2] || "", time: r[3] || "", location: r[4] || "",
+        name: r[0] || "", type: r[1] || "", date: r[2] || "", time: r[3] || "", location: r[4] || "", totalSessions: parseInt(r[5]) || 1,
       })).filter((c) => c.name && c.date && c.time);
       onImport(courses);
       toast({ title: "匯入成功", description: `匯入 ${courses.length} 筆課程` });
