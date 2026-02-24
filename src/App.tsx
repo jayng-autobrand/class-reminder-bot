@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { saveProviderToken, clearProviderToken } from "@/services/googleSheets";
+import { saveGoogleToken, clearGoogleToken } from "@/services/googleSheets";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -16,29 +16,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<any>(undefined);
 
   useEffect(() => {
-    const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : "";
-    const hashProviderToken = new URLSearchParams(hash).get("provider_token");
-    if (hashProviderToken) {
-      saveProviderToken(hashProviderToken);
-    }
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      if (session?.provider_token) {
-        saveProviderToken(session.provider_token);
-      }
       if (event === "SIGNED_OUT") {
-        clearProviderToken();
+        clearGoogleToken();
       }
     });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.provider_token) {
-        saveProviderToken(session.provider_token);
-      }
-    });
-
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
     return () => subscription.unsubscribe();
   }, []);
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { clearProviderToken } from "@/services/googleSheets";
+import { clearGoogleToken } from "@/services/googleSheets";
 import { useAppState } from "@/hooks/useAppState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardOverview from "@/components/DashboardOverview";
@@ -11,7 +11,8 @@ import MessageTemplateEditor from "@/components/MessageTemplateEditor";
 import ReminderSettings from "@/components/ReminderSettings";
 import SendMessage from "@/components/SendMessage";
 import MessageHistory from "@/components/MessageHistory";
-import { LayoutDashboard, BookOpen, Users, MessageSquare, Bell, Send, History, LogOut } from "lucide-react";
+import GoogleSheetsSettings from "@/components/GoogleSheetsSettings";
+import { LayoutDashboard, BookOpen, Users, MessageSquare, Bell, Send, History, LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
@@ -20,7 +21,7 @@ const Index = () => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    clearProviderToken();
+    clearGoogleToken();
     await supabase.auth.signOut();
     navigate("/login");
   };
@@ -80,6 +81,10 @@ const Index = () => {
               <History className="w-4 h-4" />
               <span className="hidden sm:inline">發送記錄</span>
             </TabsTrigger>
+            <TabsTrigger value="settings" className="gap-2 rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">設定</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
@@ -102,6 +107,9 @@ const Index = () => {
           </TabsContent>
           <TabsContent value="history">
             <MessageHistory />
+          </TabsContent>
+          <TabsContent value="settings">
+            <GoogleSheetsSettings />
           </TabsContent>
         </Tabs>
       </main>
