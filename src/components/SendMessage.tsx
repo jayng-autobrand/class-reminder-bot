@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Course, Student, MessageTemplate } from "@/types";
+import { formatDateDDMMYYYY } from "@/lib/dateFormat";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -45,7 +46,7 @@ export default function SendMessage({ courses, students, templates }: Props) {
     return msg
       .replace(/\{\{學生名\}\}/g, student.name)
       .replace(/\{\{課程名\}\}/g, course?.name || "")
-      .replace(/\{\{日期\}\}/g, course?.date || "")
+      .replace(/\{\{日期\}\}/g, formatDateDDMMYYYY(course?.date || ""))
       .replace(/\{\{時間\}\}/g, course?.time || "")
       .replace(/\{\{地點\}\}/g, course?.location || "");
   };
@@ -143,7 +144,7 @@ export default function SendMessage({ courses, students, templates }: Props) {
                 <SelectTrigger><SelectValue placeholder="選擇課程" /></SelectTrigger>
                 <SelectContent>
                   {courses.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name} — {c.date} {c.time}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>{c.name} — {formatDateDDMMYYYY(c.date)} {c.time}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

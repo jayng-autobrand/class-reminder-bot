@@ -1,4 +1,5 @@
 import type { Course, Student, MessageTemplate, ReminderSetting } from "@/types";
+import { formatDateDDMMYYYY } from "@/lib/dateFormat";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Users, MessageSquare, Bell, Send } from "lucide-react";
 
@@ -53,7 +54,7 @@ export default function DashboardOverview({ courses, students, templates, remind
                   <div key={course.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                     <div>
                       <p className="font-medium text-foreground">{course.name}</p>
-                      <p className="text-sm text-muted-foreground">{course.date} · {course.time}</p>
+                      <p className="text-sm text-muted-foreground">{formatDateDDMMYYYY(course.date)} · {course.time}</p>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
