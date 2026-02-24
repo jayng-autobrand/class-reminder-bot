@@ -160,6 +160,22 @@ export const googleSheets = {
     return (await res.json()).values || [];
   },
 
+  async getFirstSheetName(spreadsheetId: string): Promise<string> {
+    const token = await getAccessToken();
+    const res = await fetch(`${SHEETS_API}/${spreadsheetId}?fields=sheets.properties.title`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        clearAll();
+        throw new Error("Google 授權已失效，請到「設定」頁面重新授權");
+      }
+      throw new Error(`讀取試算表失敗: ${res.statusText}`);
+    }
+    const data = await res.json();
+    return data.sheets?.[0]?.properties?.title || "Sheet1";
+  },
+
   async exportToNewSheet(title: string, headers: string[], rows: string[][]): Promise<string> {
     const id = await this.createSpreadsheet(title);
     await this.writeSheet(id, "Sheet1!A1", [headers, ...rows]);

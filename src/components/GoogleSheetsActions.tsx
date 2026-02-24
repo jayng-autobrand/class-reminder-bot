@@ -96,7 +96,8 @@ export function ImportCoursesButton({ onImport }: ImportCoursesProps) {
     setLoading(true);
     try {
       const id = extractId(sheetUrl);
-      const rows = await googleSheets.readSheet(id, "Sheet1");
+      const sheetName = await googleSheets.getFirstSheetName(id);
+      const rows = await googleSheets.readSheet(id, `${sheetName}`);
       if (rows.length < 2) { toast({ title: "無資料", description: "試算表無有效資料列", variant: "destructive" }); return; }
       const courses: Omit<Course, "id">[] = rows.slice(1).map((r) => ({
         name: r[0] || "", type: r[1] || "", date: r[2] || "", time: r[3] || "", location: r[4] || "",
@@ -149,7 +150,8 @@ export function ImportStudentsButton({ onImport, courses }: ImportStudentsProps)
     setLoading(true);
     try {
       const id = extractId(sheetUrl);
-      const rows = await googleSheets.readSheet(id, "Sheet1");
+      const sheetName = await googleSheets.getFirstSheetName(id);
+      const rows = await googleSheets.readSheet(id, `${sheetName}`);
       if (rows.length < 2) { toast({ title: "無資料", description: "試算表無有效資料列", variant: "destructive" }); return; }
       const students: Omit<Student, "id">[] = rows.slice(1).map((r) => {
         const courseName = r[3] || "";
