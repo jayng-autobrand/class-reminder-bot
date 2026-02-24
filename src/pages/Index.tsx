@@ -94,7 +94,7 @@ const Index = () => {
             <CourseManager courses={state.courses} addCourse={state.addCourse} updateCourse={state.updateCourse} deleteCourse={state.deleteCourse} />
           </TabsContent>
           <TabsContent value="students">
-            <StudentManager students={state.students} courses={state.courses} addStudent={state.addStudent} updateStudent={state.updateStudent} deleteStudent={state.deleteStudent} />
+            <StudentManager students={state.students} courses={state.courses} addStudent={state.addStudent} updateStudent={state.updateStudent} deleteStudent={state.deleteStudent} onRefresh={state.refresh} />
           </TabsContent>
           <TabsContent value="templates">
             <MessageTemplateEditor templates={state.templates} courses={state.courses} addTemplate={state.addTemplate} updateTemplate={state.updateTemplate} deleteTemplate={state.deleteTemplate} />

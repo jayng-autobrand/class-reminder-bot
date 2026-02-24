@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import type { Course, Student } from "@/types";
 import { googleSheets } from "@/services/googleSheets";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,7 @@ interface ImportCoursesProps {
 interface ImportStudentsProps {
   onImport: (students: Omit<Student, "id">[]) => void;
   courses: Course[];
+  onCoursesCreated?: () => void;
 }
 
 export function ExportCoursesButton({ courses }: ExportCoursesProps) {
@@ -135,7 +137,7 @@ export function ImportCoursesButton({ onImport }: ImportCoursesProps) {
   );
 }
 
-export function ImportStudentsButton({ onImport, courses }: ImportStudentsProps) {
+export function ImportStudentsButton({ onImport, courses, onCoursesCreated }: ImportStudentsProps) {
   const [open, setOpen] = useState(false);
   const [sheetUrl, setSheetUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -153,10 +155,35 @@ export function ImportStudentsButton({ onImport, courses }: ImportStudentsProps)
       const sheetName = await googleSheets.getFirstSheetName(id);
       const rows = await googleSheets.readSheet(id, `${sheetName}`);
       if (rows.length < 2) { toast({ title: "無資料", description: "試算表無有效資料列", variant: "destructive" }); return; }
+
+      // Build a map of existing courses by name
+      const courseMap = new Map(courses.map((c) => [c.name, c.id]));
+
+      // Find missing course names
+      const missingNames = new Set<string>();
+      rows.slice(1).forEach((r) => {
+        const courseName = (r[3] || "").trim();
+        if (courseName && !courseMap.has(courseName)) missingNames.add(courseName);
+      });
+
+      // Auto-create missing courses
+      if (missingNames.size > 0) {
+        const today = new Date().toISOString().split("T")[0];
+        const newCourses = Array.from(missingNames).map((name) => ({
+          name, type: "", date: today, time: "00:00", location: "",
+        }));
+        const { data, error } = await supabase.from("courses").insert(newCourses).select();
+        if (error) throw new Error(`自動建立課程失敗: ${error.message}`);
+        if (data) {
+          data.forEach((c: any) => courseMap.set(c.name, c.id));
+          toast({ title: "已自動建立課程", description: `新增了 ${data.length} 個課程` });
+          onCoursesCreated?.();
+        }
+      }
+
       const students: Omit<Student, "id">[] = rows.slice(1).map((r) => {
-        const courseName = r[3] || "";
-        const course = courses.find((c) => c.name === courseName);
-        return { name: r[0] || "", phone: r[1] || "", email: r[2] || "", courseId: course?.id || "" };
+        const courseName = (r[3] || "").trim();
+        return { name: r[0] || "", phone: r[1] || "", email: r[2] || "", courseId: courseMap.get(courseName) || "" };
       }).filter((s) => s.name && s.phone && s.courseId);
       onImport(students);
       toast({ title: "匯入成功", description: `匯入 ${students.length} 筆學員` });
