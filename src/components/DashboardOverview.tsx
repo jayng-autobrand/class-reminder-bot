@@ -42,10 +42,17 @@ export default function DashboardOverview({ courses, students, templates, remind
       </div>
 
       {(() => {
-        const today = new Date().toISOString().split("T")[0];
+        const now = new Date();
         const upcoming = courses
-          .filter((c) => c.date >= today)
-          .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+          .filter((c) => {
+            const courseDateTime = new Date(`${c.date}T${c.time || "00:00:00"}`);
+            return !Number.isNaN(courseDateTime.getTime()) && courseDateTime >= now;
+          })
+          .sort((a, b) => {
+            const aDate = new Date(`${a.date}T${a.time || "00:00:00"}`).getTime();
+            const bDate = new Date(`${b.date}T${b.time || "00:00:00"}`).getTime();
+            return aDate - bDate;
+          });
         return upcoming.length > 0 ? (
           <Card>
             <CardHeader>
