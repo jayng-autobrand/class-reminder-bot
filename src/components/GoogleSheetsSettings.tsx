@@ -1,113 +1,186 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { saveGoogleToken, hasGoogleToken, clearGoogleToken } from "@/services/googleSheets";
-import { Settings, Key, ExternalLink, CheckCircle2, XCircle } from "lucide-react";
+import {
+  saveClientCredentials,
+  getClientCredentials,
+  hasClientCredentials,
+  hasTokens,
+  clearAll,
+  getOAuthUrl,
+  exchangeCode,
+} from "@/services/googleSheets";
+import { Settings, Key, ExternalLink, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
+
+const REDIRECT_PATH = "/";
 
 export default function GoogleSheetsSettings() {
-  const [token, setToken] = useState("");
-  const [hasToken, setHasToken] = useState(hasGoogleToken());
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [hasCreds, setHasCreds] = useState(hasClientCredentials());
+  const [hasToken, setHasToken] = useState(hasTokens());
+  const [exchanging, setExchanging] = useState(false);
   const { toast } = useToast();
 
-  const handleSave = () => {
-    const trimmed = token.trim();
-    if (!trimmed) return;
-    saveGoogleToken(trimmed);
-    setHasToken(true);
-    setToken("");
-    toast({ title: "已儲存", description: "Google Sheets Token 已設定完成" });
+  // Check for OAuth callback code in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    if (code && hasClientCredentials()) {
+      setExchanging(true);
+      const redirectUri = `${window.location.origin}${REDIRECT_PATH}`;
+      exchangeCode(code, redirectUri)
+        .then(() => {
+          setHasToken(true);
+          toast({ title: "授權成功", description: "Google Sheets 已連接" });
+          // Clean URL
+          window.history.replaceState({}, "", REDIRECT_PATH);
+        })
+        .catch((err) => {
+          toast({ title: "授權失敗", description: err.message, variant: "destructive" });
+        })
+        .finally(() => setExchanging(false));
+    }
+  }, [toast]);
+
+  const handleSaveCredentials = () => {
+    if (!clientId.trim() || !clientSecret.trim()) return;
+    saveClientCredentials(clientId.trim(), clientSecret.trim());
+    setHasCreds(true);
+    setClientId("");
+    setClientSecret("");
+    toast({ title: "已儲存", description: "OAuth 憑證已設定" });
+  };
+
+  const handleAuthorize = () => {
+    const { clientId } = getClientCredentials();
+    const redirectUri = `${window.location.origin}${REDIRECT_PATH}`;
+    const url = getOAuthUrl(clientId, redirectUri);
+    window.location.href = url;
   };
 
   const handleClear = () => {
-    clearGoogleToken();
+    clearAll();
+    setHasCreds(false);
     setHasToken(false);
-    toast({ title: "已清除", description: "Google Sheets Token 已移除" });
+    toast({ title: "已清除", description: "所有 Google Sheets 設定已移除" });
   };
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-foreground">Google Sheets 設定</h2>
-        <p className="text-muted-foreground mt-1">設定 Google Sheets API 的存取權杖</p>
+        <p className="text-muted-foreground mt-1">使用你自己的 Google OAuth 憑證連接 Google Sheets</p>
       </div>
 
+      {/* Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <ShieldCheck className="w-5 h-5" />
+            連接狀態
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-2">
+            {hasCreds ? (
+              <><CheckCircle2 className="w-4 h-4 text-primary" /><span className="text-sm">OAuth 憑證已設定</span></>
+            ) : (
+              <><XCircle className="w-4 h-4 text-muted-foreground" /><span className="text-sm text-muted-foreground">未設定憑證</span></>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {hasToken ? (
+              <><CheckCircle2 className="w-4 h-4 text-primary" /><span className="text-sm">已授權（Token 可用，過期會自動更新）</span></>
+            ) : (
+              <><XCircle className="w-4 h-4 text-muted-foreground" /><span className="text-sm text-muted-foreground">未授權</span></>
+            )}
+          </div>
+          {(hasCreds || hasToken) && (
+            <Button variant="outline" size="sm" onClick={handleClear}>
+              <XCircle className="w-4 h-4 mr-1" />清除所有設定
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Step 1: Credentials */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Key className="w-5 h-5" />
-            Access Token 狀態
+            Step 1：輸入 OAuth 憑證
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-2">
-            {hasToken ? (
-              <>
-                <CheckCircle2 className="w-5 h-5 text-primary" />
-                <span className="text-sm font-medium text-primary">已設定 Token</span>
-                <Button variant="outline" size="sm" onClick={handleClear} className="ml-auto">
-                  <XCircle className="w-4 h-4 mr-1" />
-                  清除
-                </Button>
-              </>
-            ) : (
-              <>
-                <XCircle className="w-5 h-5 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">尚未設定</span>
-              </>
-            )}
-          </div>
-
           <div className="space-y-2">
-            <Label>{hasToken ? "更新 Token" : "輸入 Access Token"}</Label>
-            <div className="flex gap-2">
-              <Input
-                type="password"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder="貼上你的 Google OAuth Access Token"
-                className="flex-1"
-              />
-              <Button onClick={handleSave} disabled={!token.trim()}>
-                儲存
-              </Button>
-            </div>
+            <Label>Client ID</Label>
+            <Input
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              placeholder={hasCreds ? "••••••••（已設定，輸入新值可覆蓋）" : "貼上 Client ID"}
+            />
           </div>
+          <div className="space-y-2">
+            <Label>Client Secret</Label>
+            <Input
+              type="password"
+              value={clientSecret}
+              onChange={(e) => setClientSecret(e.target.value)}
+              placeholder={hasCreds ? "••••••••（已設定，輸入新值可覆蓋）" : "貼上 Client Secret"}
+            />
+          </div>
+          <Button onClick={handleSaveCredentials} disabled={!clientId.trim() || !clientSecret.trim()}>
+            {hasCreds ? "更新憑證" : "儲存憑證"}
+          </Button>
         </CardContent>
       </Card>
 
+      {/* Step 2: Authorize */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <ShieldCheck className="w-5 h-5" />
+            Step 2：授權 Google Sheets
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            儲存憑證後，點擊下方按鈕前往 Google 授權頁面，同意後會自動返回。
+          </p>
+          <Button onClick={handleAuthorize} disabled={!hasCreds || exchanging}>
+            {exchanging ? "授權中…" : hasToken ? "重新授權" : "前往 Google 授權"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Instructions */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Settings className="w-5 h-5" />
-            如何取得 Token？
+            如何取得 OAuth 憑證？
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <p>你可以透過以下方式取得 Google Sheets 的 Access Token：</p>
           <ol className="list-decimal list-inside space-y-2">
             <li>
               前往{" "}
-              <a
-                href="https://developers.google.com/oauthplayground/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary underline inline-flex items-center gap-1"
-              >
-                Google OAuth 2.0 Playground
-                <ExternalLink className="w-3 h-3" />
+              <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-primary underline inline-flex items-center gap-1">
+                Google Cloud Console - Credentials <ExternalLink className="w-3 h-3" />
               </a>
             </li>
-            <li>在左邊「Step 1」找到 <strong>Google Sheets API v4</strong>，勾選 <code>https://www.googleapis.com/auth/spreadsheets</code></li>
-            <li>點擊「Authorize APIs」並同意授權</li>
-            <li>在「Step 2」點擊「Exchange authorization code for tokens」</li>
-            <li>複製 <strong>Access Token</strong> 貼到上方欄位</li>
+            <li>建立一個 <strong>OAuth 2.0 Client ID</strong>（應用程式類型選「Web application」）</li>
+            <li>
+              在「Authorized redirect URIs」加入：
+              <code className="block mt-1 p-2 bg-muted rounded text-xs break-all">{window.location.origin}/</code>
+            </li>
+            <li>啟用 <strong>Google Sheets API</strong>（在「Library」頁面搜尋並啟用）</li>
+            <li>複製 <strong>Client ID</strong> 和 <strong>Client Secret</strong> 貼到上方</li>
           </ol>
-          <p className="text-xs text-muted-foreground/70 mt-2">
-            ⚠️ Access Token 通常 1 小時後過期，過期後需重新取得。
-          </p>
         </CardContent>
       </Card>
     </div>

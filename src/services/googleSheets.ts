@@ -1,32 +1,119 @@
-const GOOGLE_TOKEN_KEY = "google_sheets_token";
+import { supabase } from "@/integrations/supabase/client";
 
-export function saveGoogleToken(token: string) {
-  localStorage.setItem(GOOGLE_TOKEN_KEY, token);
+const KEYS = {
+  clientId: "gs_client_id",
+  clientSecret: "gs_client_secret",
+  accessToken: "gs_access_token",
+  refreshToken: "gs_refresh_token",
+  expiresAt: "gs_expires_at",
+};
+
+export function saveClientCredentials(clientId: string, clientSecret: string) {
+  localStorage.setItem(KEYS.clientId, clientId);
+  localStorage.setItem(KEYS.clientSecret, clientSecret);
 }
 
-export function getGoogleToken(): string {
-  const token = localStorage.getItem(GOOGLE_TOKEN_KEY);
-  if (!token) throw new Error("尚未設定 Google Sheets Token，請到「設定」頁面輸入");
-  return token;
+export function getClientCredentials() {
+  return {
+    clientId: localStorage.getItem(KEYS.clientId) || "",
+    clientSecret: localStorage.getItem(KEYS.clientSecret) || "",
+  };
 }
 
-export function clearGoogleToken() {
-  localStorage.removeItem(GOOGLE_TOKEN_KEY);
+export function hasClientCredentials(): boolean {
+  return !!localStorage.getItem(KEYS.clientId) && !!localStorage.getItem(KEYS.clientSecret);
 }
 
-export function hasGoogleToken(): boolean {
-  return !!localStorage.getItem(GOOGLE_TOKEN_KEY);
+export function saveTokens(accessToken: string, refreshToken: string | null, expiresIn: number) {
+  localStorage.setItem(KEYS.accessToken, accessToken);
+  if (refreshToken) localStorage.setItem(KEYS.refreshToken, refreshToken);
+  localStorage.setItem(KEYS.expiresAt, String(Date.now() + expiresIn * 1000));
 }
 
+export function clearAll() {
+  Object.values(KEYS).forEach((k) => localStorage.removeItem(k));
+}
+
+export function hasTokens(): boolean {
+  return !!localStorage.getItem(KEYS.accessToken);
+}
+
+function isTokenExpired(): boolean {
+  const expiresAt = Number(localStorage.getItem(KEYS.expiresAt) || 0);
+  return Date.now() > expiresAt - 60000; // 1 min buffer
+}
+
+export async function getAccessToken(): Promise<string> {
+  const token = localStorage.getItem(KEYS.accessToken);
+  if (!token) throw new Error("尚未授權 Google Sheets，請到「設定」頁面完成授權");
+
+  if (!isTokenExpired()) return token;
+
+  // Try refresh
+  const refreshToken = localStorage.getItem(KEYS.refreshToken);
+  const { clientId, clientSecret } = getClientCredentials();
+  if (!refreshToken || !clientId || !clientSecret) {
+    clearAll();
+    throw new Error("Token 已過期且無法自動更新，請到「設定」頁面重新授權");
+  }
+
+  const { data, error } = await supabase.functions.invoke("google-oauth", {
+    body: {
+      action: "refresh",
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+    },
+  });
+
+  if (error || data?.error) {
+    clearAll();
+    throw new Error("Token 更新失敗，請到「設定」頁面重新授權");
+  }
+
+  saveTokens(data.access_token, null, data.expires_in);
+  return data.access_token;
+}
+
+export function getOAuthUrl(clientId: string, redirectUri: string): string {
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: "https://www.googleapis.com/auth/spreadsheets",
+    access_type: "offline",
+    prompt: "consent",
+  });
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
+export async function exchangeCode(code: string, redirectUri: string): Promise<void> {
+  const { clientId, clientSecret } = getClientCredentials();
+  if (!clientId || !clientSecret) throw new Error("請先設定 Client ID 和 Client Secret");
+
+  const { data, error } = await supabase.functions.invoke("google-oauth", {
+    body: {
+      action: "exchange",
+      client_id: clientId,
+      client_secret: clientSecret,
+      code,
+      redirect_uri: redirectUri,
+    },
+  });
+
+  if (error || data?.error) {
+    throw new Error(data?.error || "授權碼交換失敗");
+  }
+
+  saveTokens(data.access_token, data.refresh_token, data.expires_in);
+}
+
+// Google Sheets API
 const SHEETS_API = "https://sheets.googleapis.com/v4/spreadsheets";
-
-export interface SheetData {
-  values: string[][];
-}
 
 export const googleSheets = {
   async createSpreadsheet(title: string): Promise<string> {
-    const token = getGoogleToken();
+    const token = await getAccessToken();
     const res = await fetch(SHEETS_API, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -34,8 +121,8 @@ export const googleSheets = {
     });
     if (!res.ok) {
       if (res.status === 401 || res.status === 403) {
-        clearGoogleToken();
-        throw new Error("Google Token 已失效或無權限，請到「設定」頁面重新輸入");
+        clearAll();
+        throw new Error("Google 授權已失效，請到「設定」頁面重新授權");
       }
       throw new Error(`建立試算表失敗: ${res.statusText}`);
     }
@@ -43,7 +130,7 @@ export const googleSheets = {
   },
 
   async writeSheet(spreadsheetId: string, range: string, values: string[][]): Promise<void> {
-    const token = getGoogleToken();
+    const token = await getAccessToken();
     const url = `${SHEETS_API}/${spreadsheetId}/values/${range}?valueInputOption=RAW`;
     const res = await fetch(url, {
       method: "PUT",
@@ -52,26 +139,25 @@ export const googleSheets = {
     });
     if (!res.ok) {
       if (res.status === 401 || res.status === 403) {
-        clearGoogleToken();
-        throw new Error("Google Token 已失效或無權限，請到「設定」頁面重新輸入");
+        clearAll();
+        throw new Error("Google 授權已失效，請到「設定」頁面重新授權");
       }
       throw new Error(`寫入試算表失敗: ${res.statusText}`);
     }
   },
 
   async readSheet(spreadsheetId: string, range: string): Promise<string[][]> {
-    const token = getGoogleToken();
+    const token = await getAccessToken();
     const url = `${SHEETS_API}/${spreadsheetId}/values/${range}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) {
       if (res.status === 401 || res.status === 403) {
-        clearGoogleToken();
-        throw new Error("Google Token 已失效或無權限，請到「設定」頁面重新輸入");
+        clearAll();
+        throw new Error("Google 授權已失效，請到「設定」頁面重新授權");
       }
       throw new Error(`讀取試算表失敗: ${res.statusText}`);
     }
-    const data: SheetData = await res.json();
-    return data.values || [];
+    return (await res.json()).values || [];
   },
 
   async exportToNewSheet(title: string, headers: string[], rows: string[][]): Promise<string> {
