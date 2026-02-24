@@ -31,7 +31,9 @@ const Login = () => {
       extraParams: {
         access_type: "offline",
         prompt: "consent",
-        scope: "https://www.googleapis.com/auth/spreadsheets",
+        include_granted_scopes: "true",
+        scope: "openid email profile https://www.googleapis.com/auth/spreadsheets",
+        scopes: "https://www.googleapis.com/auth/spreadsheets",
       },
     });
     if (error) {
