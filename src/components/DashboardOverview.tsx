@@ -1,5 +1,6 @@
 import type { Course, Student, MessageTemplate, ReminderSetting } from "@/types";
 import { formatDateDDMMYYYY } from "@/lib/dateFormat";
+import { getNextSessionDate } from "@/lib/courseSchedule";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Users, MessageSquare, Bell, Send } from "lucide-react";
 
@@ -45,12 +46,20 @@ export default function DashboardOverview({ courses, students, templates, remind
         const now = new Date();
         const upcoming = courses
           .filter((c) => {
-            const courseDateTime = new Date(`${c.date}T${c.time || "00:00:00"}`);
-            return !Number.isNaN(courseDateTime.getTime()) && courseDateTime >= now;
+            if (c.recurringDays && c.totalSessions > 1) {
+              return c.completedSessions < c.totalSessions;
+            }
+            const endTime = c.timeEnd || c.time || "00:00:00";
+            const courseEnd = new Date(`${c.date}T${endTime}`);
+            return !Number.isNaN(courseEnd.getTime()) && courseEnd >= now;
+          })
+          .map((c) => {
+            const nextDate = c.recurringDays ? getNextSessionDate(c) : c.date;
+            return { ...c, _nextDate: nextDate || c.date };
           })
           .sort((a, b) => {
-            const aDate = new Date(`${a.date}T${a.time || "00:00:00"}`).getTime();
-            const bDate = new Date(`${b.date}T${b.time || "00:00:00"}`).getTime();
+            const aDate = new Date(`${a._nextDate}T${a.time || "00:00:00"}`).getTime();
+            const bDate = new Date(`${b._nextDate}T${b.time || "00:00:00"}`).getTime();
             return aDate - bDate;
           });
         return upcoming.length > 0 ? (
@@ -66,7 +75,7 @@ export default function DashboardOverview({ courses, students, templates, remind
                   <div key={course.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                     <div>
                       <p className="font-medium text-foreground">{course.name}</p>
-                      <p className="text-sm text-muted-foreground">{formatDateDDMMYYYY(course.date)} · {course.time}</p>
+                      <p className="text-sm text-muted-foreground">{formatDateDDMMYYYY((course as any)._nextDate)} · {course.time}{course.timeEnd ? `–${course.timeEnd}` : ""}</p>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">

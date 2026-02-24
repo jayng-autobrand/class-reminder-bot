@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { Course, Student, MessageTemplate, ReminderSetting } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { countCompletedSessions } from "@/lib/courseSchedule";
 
 export function useAppState() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -21,9 +22,24 @@ export function useAppState() {
         supabase.from('reminder_settings').select('*'),
       ]);
 
-      if (cRes.data) setCourses(cRes.data.map((c: any) => ({
-        id: c.id, name: c.name, type: c.type || '', date: c.date, time: c.time, location: c.location || '', totalSessions: c.total_sessions ?? 1, completedSessions: c.completed_sessions ?? 0,
-      })));
+      if (cRes.data) {
+        const mapped = cRes.data.map((c: any) => ({
+          id: c.id, name: c.name, type: c.type || '', date: c.date, time: c.time, timeEnd: c.time_end || '', location: c.location || '', totalSessions: c.total_sessions ?? 1, completedSessions: c.completed_sessions ?? 0, recurringDays: c.recurring_days || '',
+        }));
+        setCourses(mapped);
+
+        // Auto-update completed sessions on load
+        for (const course of mapped) {
+          if (course.totalSessions > 1) {
+            const autoCompleted = countCompletedSessions(course);
+            if (autoCompleted !== course.completedSessions) {
+              await supabase.from('courses').update({ completed_sessions: autoCompleted }).eq('id', course.id);
+              course.completedSessions = autoCompleted;
+            }
+          }
+        }
+        setCourses([...mapped]);
+      }
       if (sRes.data) setStudents(sRes.data.map((s: any) => ({
         id: s.id, name: s.name, phone: s.phone, email: s.email || '', courseId: s.course_id,
       })));
@@ -47,10 +63,10 @@ export function useAppState() {
   // --- Courses ---
   const addCourse = async (course: Omit<Course, "id">) => {
     const { data, error } = await supabase.from('courses').insert({
-      name: course.name, type: course.type, date: course.date, time: course.time, location: course.location, total_sessions: course.totalSessions ?? 1, completed_sessions: course.completedSessions ?? 0,
+      name: course.name, type: course.type, date: course.date, time: course.time, time_end: course.timeEnd || '00:00:00', location: course.location, total_sessions: course.totalSessions ?? 1, completed_sessions: course.completedSessions ?? 0, recurring_days: course.recurringDays || '',
     }).select().single();
     if (error) { toast({ title: "錯誤", description: error.message, variant: "destructive" }); return; }
-    setCourses(prev => [...prev, { id: data.id, name: data.name, type: data.type, date: data.date, time: data.time, location: data.location, totalSessions: data.total_sessions ?? 1, completedSessions: data.completed_sessions ?? 0 }]);
+    setCourses(prev => [...prev, { id: data.id, name: data.name, type: data.type, date: data.date, time: data.time, timeEnd: data.time_end || '', location: data.location, totalSessions: data.total_sessions ?? 1, completedSessions: data.completed_sessions ?? 0, recurringDays: data.recurring_days || '' }]);
   };
 
   const updateCourse = async (id: string, updates: Partial<Course>) => {
@@ -59,9 +75,11 @@ export function useAppState() {
     if (updates.type !== undefined) dbUpdates.type = updates.type;
     if (updates.date !== undefined) dbUpdates.date = updates.date;
     if (updates.time !== undefined) dbUpdates.time = updates.time;
+    if (updates.timeEnd !== undefined) dbUpdates.time_end = updates.timeEnd;
     if (updates.location !== undefined) dbUpdates.location = updates.location;
     if (updates.totalSessions !== undefined) dbUpdates.total_sessions = updates.totalSessions;
     if (updates.completedSessions !== undefined) dbUpdates.completed_sessions = updates.completedSessions;
+    if (updates.recurringDays !== undefined) dbUpdates.recurring_days = updates.recurringDays;
     const { error } = await supabase.from('courses').update(dbUpdates).eq('id', id);
     if (error) { toast({ title: "錯誤", description: error.message, variant: "destructive" }); return; }
     setCourses(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
