@@ -16,6 +16,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<any>(undefined);
 
   useEffect(() => {
+    const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : "";
+    const hashProviderToken = new URLSearchParams(hash).get("provider_token");
+    if (hashProviderToken) {
+      saveProviderToken(hashProviderToken);
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       if (session?.provider_token) {
@@ -25,12 +31,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
         clearProviderToken();
       }
     });
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.provider_token) {
         saveProviderToken(session.provider_token);
       }
     });
+
     return () => subscription.unsubscribe();
   }, []);
 
