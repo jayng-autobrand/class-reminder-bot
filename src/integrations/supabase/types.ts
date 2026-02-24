@@ -22,6 +22,7 @@ export type Database = {
           location: string
           name: string
           time: string
+          total_sessions: number
           type: string
           updated_at: string
         }
@@ -32,6 +33,7 @@ export type Database = {
           location?: string
           name: string
           time: string
+          total_sessions?: number
           type?: string
           updated_at?: string
         }
@@ -42,6 +44,7 @@ export type Database = {
           location?: string
           name?: string
           time?: string
+          total_sessions?: number
           type?: string
           updated_at?: string
         }
