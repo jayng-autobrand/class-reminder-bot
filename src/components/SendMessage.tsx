@@ -144,7 +144,7 @@ export default function SendMessage({ courses, students, templates }: Props) {
                 <SelectTrigger><SelectValue placeholder="選擇課程" /></SelectTrigger>
                 <SelectContent>
                   {courses.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name} — {formatDateDDMMYYYY(c.date)} {c.time}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>{c.name} — {formatDateDDMMYYYY(c.date)} {c.time}{c.timeEnd ? `–${c.timeEnd}` : ""}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

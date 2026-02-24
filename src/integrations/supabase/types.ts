@@ -22,7 +22,9 @@ export type Database = {
           id: string
           location: string
           name: string
+          recurring_days: string
           time: string
+          time_end: string
           total_sessions: number
           type: string
           updated_at: string
@@ -34,7 +36,9 @@ export type Database = {
           id?: string
           location?: string
           name: string
+          recurring_days?: string
           time: string
+          time_end?: string
           total_sessions?: number
           type?: string
           updated_at?: string
@@ -46,7 +50,9 @@ export type Database = {
           id?: string
           location?: string
           name?: string
+          recurring_days?: string
           time?: string
+          time_end?: string
           total_sessions?: number
           type?: string
           updated_at?: string

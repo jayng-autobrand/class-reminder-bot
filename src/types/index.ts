@@ -2,11 +2,13 @@ export interface Course {
   id: string;
   name: string;
   type: string;
-  date: string;
-  time: string;
+  date: string; // start date (ISO yyyy-mm-dd)
+  time: string; // start time
+  timeEnd: string; // end time
   location: string;
   totalSessions: number;
   completedSessions: number;
+  recurringDays: string; // comma-separated weekday numbers: 0=Sun,1=Mon,...6=Sat; empty = single
 }
 
 export interface Student {
