@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2, BookOpen, MapPin, Clock, Calendar } from "lucide-react";
+import { ExportCoursesButton, ImportCoursesButton } from "@/components/GoogleSheetsActions";
 
 interface Props {
   courses: Course[];
@@ -49,18 +50,21 @@ export default function CourseManager({ courses, addCourse, updateCourse, delete
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold text-foreground">課程管理</h2>
           <p className="text-muted-foreground mt-1">新增、編輯或刪除你的課程</p>
         </div>
-        <Dialog open={open} onOpenChange={handleOpenChange}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              新增課程
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2 flex-wrap">
+          <ImportCoursesButton onImport={async (items) => { for (const c of items) await addCourse(c); }} />
+          <ExportCoursesButton courses={courses} />
+          <Dialog open={open} onOpenChange={handleOpenChange}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                新增課程
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{editingId ? "編輯課程" : "新增課程"}</DialogTitle>
@@ -91,7 +95,8 @@ export default function CourseManager({ courses, addCourse, updateCourse, delete
               <Button onClick={handleSave} className="w-full">{editingId ? "儲存修改" : "新增課程"}</Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {courses.length === 0 ? (

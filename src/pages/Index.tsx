@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { useAppState } from "@/hooks/useAppState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardOverview from "@/components/DashboardOverview";
@@ -8,11 +10,18 @@ import MessageTemplateEditor from "@/components/MessageTemplateEditor";
 import ReminderSettings from "@/components/ReminderSettings";
 import SendMessage from "@/components/SendMessage";
 import MessageHistory from "@/components/MessageHistory";
-import { LayoutDashboard, BookOpen, Users, MessageSquare, Bell, Send, History } from "lucide-react";
+import { LayoutDashboard, BookOpen, Users, MessageSquare, Bell, Send, History, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const state = useAppState();
   const [tab, setTab] = useState("overview");
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/login");
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -30,7 +39,11 @@ const Index = () => {
               </div>
             </div>
           </div>
-        </div>
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-1.5 text-muted-foreground">
+              <LogOut className="w-4 h-4" />
+              登出
+            </Button>
+          </div>
       </header>
 
       {/* Main Content */}
