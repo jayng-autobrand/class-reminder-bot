@@ -16,11 +16,12 @@ interface Props {
   addStudent: (s: Omit<Student, "id">) => void;
   updateStudent: (id: string, data: Partial<Student>) => void;
   deleteStudent: (id: string) => void;
+  onRefresh?: () => void;
 }
 
 const emptyStudent = { name: "", phone: "", email: "", courseId: "" };
 
-export default function StudentManager({ students, courses, addStudent, updateStudent, deleteStudent }: Props) {
+export default function StudentManager({ students, courses, addStudent, updateStudent, deleteStudent, onRefresh }: Props) {
   const [form, setForm] = useState(emptyStudent);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -71,7 +72,7 @@ export default function StudentManager({ students, courses, addStudent, updateSt
               ))}
             </SelectContent>
           </Select>
-          <ImportStudentsButton onImport={async (items) => { for (const s of items) await addStudent(s); }} courses={courses} />
+          <ImportStudentsButton onImport={async (items) => { for (const s of items) await addStudent(s); }} courses={courses} onCoursesCreated={onRefresh} />
           <ExportStudentsButton students={students} courses={courses} />
           <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
