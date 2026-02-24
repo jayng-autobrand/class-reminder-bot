@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { clearGoogleToken } from "@/services/googleSheets";
+import { clearAll as clearGoogleAuth } from "@/services/googleSheets";
 import { useAppState } from "@/hooks/useAppState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardOverview from "@/components/DashboardOverview";
@@ -21,7 +21,7 @@ const Index = () => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    clearGoogleToken();
+    clearGoogleAuth();
     await supabase.auth.signOut();
     navigate("/login");
   };

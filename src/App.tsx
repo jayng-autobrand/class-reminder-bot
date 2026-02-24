@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { saveGoogleToken, clearGoogleToken } from "@/services/googleSheets";
+import { clearAll as clearGoogleAuth } from "@/services/googleSheets";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -19,7 +19,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       if (event === "SIGNED_OUT") {
-        clearGoogleToken();
+        clearGoogleAuth();
       }
     });
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
