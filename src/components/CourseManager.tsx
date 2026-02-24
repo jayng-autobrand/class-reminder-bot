@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2, BookOpen, MapPin, Clock, Calendar } from "lucide-react";
+import { formatDateDDMMYYYY } from "@/lib/dateFormat";
 import { ExportCoursesButton, ImportCoursesButton } from "@/components/GoogleSheetsActions";
 
 interface Props {
@@ -134,7 +135,7 @@ export default function CourseManager({ courses, addCourse, updateCourse, delete
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  <span>{course.date}</span>
+                  <span>{formatDateDDMMYYYY(course.date)}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4" />

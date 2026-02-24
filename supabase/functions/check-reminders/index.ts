@@ -90,10 +90,14 @@ serve(async (req) => {
       console.log(`Sending reminders for ${course.name} to ${students.length} students`);
 
       for (const student of students) {
+        // Format date as dd/mm/yyyy
+        const dateParts = (course.date || '').split('-');
+        const formattedDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : course.date;
+
         const message = template.content
           .replace(/\{\{學生名\}\}/g, student.name)
           .replace(/\{\{課程名\}\}/g, course.name)
-          .replace(/\{\{日期\}\}/g, course.date)
+          .replace(/\{\{日期\}\}/g, formattedDate)
           .replace(/\{\{時間\}\}/g, course.time)
           .replace(/\{\{地點\}\}/g, course.location || '');
 
