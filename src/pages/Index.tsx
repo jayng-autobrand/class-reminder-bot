@@ -6,7 +6,8 @@ import CourseManager from "@/components/CourseManager";
 import StudentManager from "@/components/StudentManager";
 import MessageTemplateEditor from "@/components/MessageTemplateEditor";
 import ReminderSettings from "@/components/ReminderSettings";
-import { LayoutDashboard, BookOpen, Users, MessageSquare, Bell } from "lucide-react";
+import SendMessage from "@/components/SendMessage";
+import { LayoutDashboard, BookOpen, Users, MessageSquare, Bell, Send } from "lucide-react";
 
 const Index = () => {
   const state = useAppState();
@@ -55,6 +56,10 @@ const Index = () => {
               <Bell className="w-4 h-4" />
               <span className="hidden sm:inline">提醒設定</span>
             </TabsTrigger>
+            <TabsTrigger value="send" className="gap-2 rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <Send className="w-4 h-4" />
+              <span className="hidden sm:inline">發送訊息</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
@@ -71,6 +76,9 @@ const Index = () => {
           </TabsContent>
           <TabsContent value="reminders">
             <ReminderSettings reminders={state.reminders} courses={state.courses} templates={state.templates} students={state.students} addReminder={state.addReminder} updateReminder={state.updateReminder} deleteReminder={state.deleteReminder} />
+          </TabsContent>
+          <TabsContent value="send">
+            <SendMessage courses={state.courses} students={state.students} templates={state.templates} />
           </TabsContent>
         </Tabs>
       </main>
