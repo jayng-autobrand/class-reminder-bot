@@ -168,9 +168,11 @@ export function ImportStudentsButton({ onImport, courses, onCoursesCreated }: Im
 
       // Auto-create missing courses
       if (missingNames.size > 0) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("未登入");
         const today = new Date().toISOString().split("T")[0];
         const newCourses = Array.from(missingNames).map((name) => ({
-          name, type: "", date: today, time: "00:00", location: "",
+          name, type: "", date: today, time: "00:00", location: "", user_id: user.id,
         }));
         const { data, error } = await supabase.from("courses").insert(newCourses).select();
         if (error) throw new Error(`自動建立課程失敗: ${error.message}`);
