@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Pencil, Trash2, BookOpen, MapPin, Clock, Calendar, Hash, Archive, ChevronDown, ChevronUp, Repeat } from "lucide-react";
+import { Plus, Pencil, Trash2, BookOpen, MapPin, Clock, Calendar, Hash, Archive, ChevronDown, ChevronUp, Repeat, AlertCircle } from "lucide-react";
 import { formatDateDDMMYYYY } from "@/lib/dateFormat";
 import { formatRecurringDays, getNextSessionDate, WEEKDAY_LABELS } from "@/lib/courseSchedule";
 import { ExportCoursesButton, ImportCoursesButton } from "@/components/GoogleSheetsActions";
@@ -20,9 +20,16 @@ interface Props {
 
 const emptyCourse = { name: "", type: "", date: "", time: "", timeEnd: "", location: "", totalSessions: 1, completedSessions: 0, recurringDays: "" };
 
+/** Course synced from sheet but not yet configured (no real time/sessions set) */
+function isCourseUnconfigured(course: Course): boolean {
+  const hasNoTime = !course.time || course.time === "00:00" || course.time === "00:00:00";
+  const hasNoEndTime = !course.timeEnd || course.timeEnd === "00:00" || course.timeEnd === "00:00:00";
+  return hasNoTime && hasNoEndTime;
+}
+
 function isCourseExpired(course: Course): boolean {
+  if (isCourseUnconfigured(course)) return false;
   if (course.totalSessions > 1 && course.recurringDays) {
-    // For recurring: expired when all sessions done
     return course.completedSessions >= course.totalSessions;
   }
   const endTime = course.timeEnd || course.time || "00:00:00";
@@ -124,8 +131,9 @@ export default function CourseManager({ courses, addCourse, updateCourse, delete
   const [open, setOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
 
-  const activeCourses = courses.filter((c) => !isCourseExpired(c));
-  const archivedCourses = courses.filter((c) => isCourseExpired(c));
+  const unconfiguredCourses = courses.filter((c) => isCourseUnconfigured(c));
+  const activeCourses = courses.filter((c) => !isCourseUnconfigured(c) && !isCourseExpired(c));
+  const archivedCourses = courses.filter((c) => !isCourseUnconfigured(c) && isCourseExpired(c));
 
   const handleSave = () => {
     if (!form.name || !form.date || !form.time) return;
@@ -233,7 +241,7 @@ export default function CourseManager({ courses, addCourse, updateCourse, delete
         </div>
       </div>
 
-      {activeCourses.length === 0 && archivedCourses.length === 0 ? (
+      {activeCourses.length === 0 && archivedCourses.length === 0 && unconfiguredCourses.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <BookOpen className="w-12 h-12 text-muted-foreground mb-4" />
@@ -251,10 +259,49 @@ export default function CourseManager({ courses, addCourse, updateCourse, delete
               ))}
             </div>
           )}
-          {activeCourses.length === 0 && archivedCourses.length > 0 && (
+          {activeCourses.length === 0 && (archivedCourses.length > 0 || unconfiguredCourses.length > 0) && (
             <p className="text-muted-foreground">目前冇進行中嘅課程</p>
           )}
         </>
+      )}
+
+      {unconfiguredCourses.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-amber-600">
+            <AlertCircle className="w-4 h-4" />
+            <span className="font-medium">待設定課程 ({unconfiguredCourses.length})</span>
+          </div>
+          <p className="text-xs text-muted-foreground -mt-2">呢啲課程係從 Google Sheets 匯入，仲未設定時間同堂數，請點擊編輯完成設定。</p>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {unconfiguredCourses.map((course) => (
+              <Card key={course.id} className="group hover:shadow-md transition-shadow border-amber-200 bg-amber-50/30">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg">{course.name}</CardTitle>
+                      {course.type && (
+                        <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-secondary text-secondary-foreground">
+                          {course.type}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(course)}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteCourse(course.id)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground">
+                  <p className="text-amber-600 font-medium">⚠ 請設定時間同堂數</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       )}
 
       {archivedCourses.length > 0 && (
