@@ -74,6 +74,7 @@ Deno.serve(async (req) => {
 
     for (const settings of syncSettings) {
       try {
+        const userId = settings.user_id
         // Get valid access token
         let accessToken = settings.access_token
         const now = Date.now()
@@ -104,8 +105,8 @@ Deno.serve(async (req) => {
           continue
         }
 
-        // Get existing courses
-        const { data: courses } = await supabase.from('courses').select('id, name')
+        // Get existing courses for this user
+        const { data: courses } = await supabase.from('courses').select('id, name').eq('user_id', userId)
         const courseMap = new Map((courses || []).map((c: any) => [c.name, c.id]))
 
         // Find and create missing courses
@@ -118,7 +119,7 @@ Deno.serve(async (req) => {
         if (missingNames.size > 0) {
           const today = new Date().toISOString().split('T')[0]
           const newCourses = Array.from(missingNames).map((name) => ({
-            name, type: '', date: today, time: '00:00', location: '',
+            name, type: '', date: today, time: '00:00', location: '', user_id: userId,
           }))
           const { data: created } = await supabase.from('courses').insert(newCourses).select()
           if (created) {
@@ -135,12 +136,13 @@ Deno.serve(async (req) => {
               phone: (r[1] || '').trim(),
               email: (r[2] || '').trim(),
               course_id: courseMap.get(courseName) || '',
+              user_id: userId,
             }
           })
           .filter((s) => s.name && s.phone && s.course_id)
 
-        // Get existing students
-        const { data: existingStudents } = await supabase.from('students').select('id, name, phone, course_id')
+        // Get existing students for this user
+        const { data: existingStudents } = await supabase.from('students').select('id, name, phone, course_id').eq('user_id', userId)
 
         // Upsert: add new students that don't exist (match by phone + course_id)
         const existingSet = new Set(
