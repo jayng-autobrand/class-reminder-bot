@@ -1,14 +1,21 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { MessageSquare } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -24,14 +31,38 @@ const Login = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (error) {
-      console.error("Login error:", error);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) return;
+
+    if (isSignUp) {
+      if (password !== confirmPassword) {
+        toast({ title: "密碼不一致", description: "請確認兩次輸入嘅密碼相同", variant: "destructive" });
+        return;
+      }
+      if (password.length < 6) {
+        toast({ title: "密碼太短", description: "密碼至少需要 6 個字元", variant: "destructive" });
+        return;
+      }
+      setLoading(true);
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: window.location.origin },
+      });
       setLoading(false);
+      if (error) {
+        toast({ title: "註冊失敗", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "註冊成功", description: "請檢查你嘅電郵信箱，點擊驗證連結完成註冊。" });
+      }
+    } else {
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      setLoading(false);
+      if (error) {
+        toast({ title: "登入失敗", description: error.message, variant: "destructive" });
+      }
     }
   };
 
@@ -44,19 +75,59 @@ const Login = () => {
           </div>
           <CardTitle className="text-xl">WhatsApp 上堂提示</CardTitle>
           <p className="text-sm text-muted-foreground">
-            登入後可使用 Google Sheets 匯入匯出功能
+            {isSignUp ? "建立帳戶以使用所有功能" : "登入你嘅帳戶"}
           </p>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleGoogleLogin} disabled={loading} className="w-full gap-2">
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
-              <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-              <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-              <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-            </svg>
-            {loading ? "登入中…" : "使用 Google 帳戶登入"}
-          </Button>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">電郵地址</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">密碼</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            {isSignUp && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">確認密碼</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+            )}
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? (isSignUp ? "註冊中…" : "登入中…") : (isSignUp ? "註冊" : "登入")}
+            </Button>
+          </form>
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-sm text-muted-foreground hover:text-foreground underline"
+            >
+              {isSignUp ? "已有帳戶？登入" : "未有帳戶？註冊"}
+            </button>
+          </div>
         </CardContent>
       </Card>
     </div>
