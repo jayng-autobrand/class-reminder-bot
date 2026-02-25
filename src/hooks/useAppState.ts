@@ -4,6 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { countCompletedSessions } from "@/lib/courseSchedule";
 
+async function getUserId(): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+  return user.id;
+}
+
 export function useAppState() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -15,6 +21,7 @@ export function useAppState() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
+      // RLS handles filtering by user_id automatically
       const [cRes, sRes, tRes, rRes] = await Promise.all([
         supabase.from('courses').select('*').order('date'),
         supabase.from('students').select('*').order('name'),
@@ -62,8 +69,9 @@ export function useAppState() {
 
   // --- Courses ---
   const addCourse = async (course: Omit<Course, "id">) => {
+    const uid = await getUserId();
     const { data, error } = await supabase.from('courses').insert({
-      name: course.name, type: course.type, date: course.date, time: course.time, time_end: course.timeEnd || '00:00:00', location: course.location, total_sessions: course.totalSessions ?? 1, completed_sessions: course.completedSessions ?? 0, recurring_days: course.recurringDays || '',
+      name: course.name, type: course.type, date: course.date, time: course.time, time_end: course.timeEnd || '00:00:00', location: course.location, total_sessions: course.totalSessions ?? 1, completed_sessions: course.completedSessions ?? 0, recurring_days: course.recurringDays || '', user_id: uid,
     }).select().single();
     if (error) { toast({ title: "錯誤", description: error.message, variant: "destructive" }); return; }
     setCourses(prev => [...prev, { id: data.id, name: data.name, type: data.type, date: data.date, time: data.time, timeEnd: data.time_end || '', location: data.location, totalSessions: data.total_sessions ?? 1, completedSessions: data.completed_sessions ?? 0, recurringDays: data.recurring_days || '' }]);
@@ -95,8 +103,9 @@ export function useAppState() {
 
   // --- Students ---
   const addStudent = async (student: Omit<Student, "id">) => {
+    const uid = await getUserId();
     const { data, error } = await supabase.from('students').insert({
-      name: student.name, phone: student.phone, email: student.email, course_id: student.courseId,
+      name: student.name, phone: student.phone, email: student.email, course_id: student.courseId, user_id: uid,
     }).select().single();
     if (error) { toast({ title: "錯誤", description: error.message, variant: "destructive" }); return; }
     setStudents(prev => [...prev, { id: data.id, name: data.name, phone: data.phone, email: data.email || '', courseId: data.course_id }]);
@@ -121,8 +130,9 @@ export function useAppState() {
 
   // --- Templates ---
   const addTemplate = async (template: Omit<MessageTemplate, "id">) => {
+    const uid = await getUserId();
     const { data, error } = await supabase.from('message_templates').insert({
-      name: template.name, content: template.content, course_id: template.courseId || null,
+      name: template.name, content: template.content, course_id: template.courseId || null, user_id: uid,
     }).select().single();
     if (error) { toast({ title: "錯誤", description: error.message, variant: "destructive" }); return; }
     setTemplates(prev => [...prev, { id: data.id, name: data.name, content: data.content, courseId: data.course_id || '' }]);
@@ -146,9 +156,10 @@ export function useAppState() {
 
   // --- Reminders ---
   const addReminder = async (reminder: Omit<ReminderSetting, "id">) => {
+    const uid = await getUserId();
     const { data, error } = await supabase.from('reminder_settings').insert({
       course_id: reminder.courseId, days_before: reminder.daysBefore, hours_before: reminder.hoursBefore,
-      template_id: reminder.templateId, enabled: reminder.enabled,
+      template_id: reminder.templateId, enabled: reminder.enabled, user_id: uid,
     }).select().single();
     if (error) { toast({ title: "錯誤", description: error.message, variant: "destructive" }); return; }
     setReminders(prev => [...prev, {

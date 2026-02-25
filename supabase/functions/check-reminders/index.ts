@@ -126,6 +126,7 @@ serve(async (req) => {
             status: response.ok ? 'queued' : 'failed',
             queue_id: data.queue_id || null,
             error_message: response.ok ? null : JSON.stringify(data),
+            user_id: course.user_id,
           });
 
           if (response.ok) totalSent++;
@@ -141,6 +142,7 @@ serve(async (req) => {
             message_content: message,
             status: 'failed',
             error_message: err instanceof Error ? err.message : 'Unknown error',
+            user_id: course.user_id,
           });
         }
       }
