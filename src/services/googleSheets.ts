@@ -44,6 +44,25 @@ function isTokenExpired(): boolean {
 }
 
 export async function getAccessToken(): Promise<string> {
+  // First try to get the latest token from DB (edge function may have refreshed it)
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: syncData } = await supabase
+        .from('sync_settings')
+        .select('access_token, refresh_token, expires_at, client_id, client_secret')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (syncData?.access_token && Date.now() < (syncData.expires_at - 60000)) {
+        // DB has a valid token, sync to localStorage
+        saveTokens(syncData.access_token, syncData.refresh_token || null, Math.floor((syncData.expires_at - Date.now()) / 1000));
+        return syncData.access_token;
+      }
+    }
+  } catch {
+    // Fall through to localStorage logic
+  }
+
   const token = localStorage.getItem(KEYS.accessToken);
   if (!token) throw new Error("尚未授權 Google Sheets，請到「設定」頁面完成授權");
 
@@ -72,6 +91,20 @@ export async function getAccessToken(): Promise<string> {
   }
 
   saveTokens(data.access_token, null, data.expires_in);
+
+  // Also update DB so edge function has the latest token
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('sync_settings').update({
+        access_token: data.access_token,
+        expires_at: Date.now() + data.expires_in * 1000,
+      }).eq('user_id', user.id);
+    }
+  } catch {
+    // Non-critical
+  }
+
   return data.access_token;
 }
 
