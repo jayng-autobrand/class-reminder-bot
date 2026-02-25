@@ -50,7 +50,7 @@ export default function DashboardOverview({ courses, students, templates, remind
               return c.completedSessions < c.totalSessions;
             }
             const endTime = c.timeEnd || c.time || "00:00:00";
-            const courseEnd = new Date(`${c.date}T${endTime}`);
+            const courseEnd = new Date(`${c.date}T${endTime}+08:00`);
             return !Number.isNaN(courseEnd.getTime()) && courseEnd >= now;
           })
           .map((c) => {
@@ -58,8 +58,8 @@ export default function DashboardOverview({ courses, students, templates, remind
             return { ...c, _nextDate: nextDate || c.date };
           })
           .sort((a, b) => {
-            const aDate = new Date(`${a._nextDate}T${a.time || "00:00:00"}`).getTime();
-            const bDate = new Date(`${b._nextDate}T${b.time || "00:00:00"}`).getTime();
+            const aDate = new Date(`${a._nextDate}T${a.time || "00:00:00"}+08:00`).getTime();
+            const bDate = new Date(`${b._nextDate}T${b.time || "00:00:00"}+08:00`).getTime();
             return aDate - bDate;
           });
         return upcoming.length > 0 ? (
