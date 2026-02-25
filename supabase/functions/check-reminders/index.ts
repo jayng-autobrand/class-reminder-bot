@@ -8,6 +8,27 @@ const corsHeaders = {
 
 const PERISKOPE_API_URL = "https://api.periskope.app/v1";
 const ORG_PHONE = "85267610707";
+const HONG_KONG_UTC_OFFSET_HOURS = 8;
+
+function parseCourseDateTimeInHongKong(dateStr: string, timeStr: string): Date {
+  const [year, month, day] = (dateStr || '').split('-').map(Number);
+  const [hours, minutes, seconds = '0'] = (timeStr || '00:00:00').split(':');
+
+  if (!year || !month || !day) {
+    throw new Error(`Invalid course date: ${dateStr}`);
+  }
+
+  const utcMillis = Date.UTC(
+    year,
+    month - 1,
+    day,
+    Number(hours) - HONG_KONG_UTC_OFFSET_HOURS,
+    Number(minutes),
+    Number(seconds),
+  );
+
+  return new Date(utcMillis);
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -47,7 +68,7 @@ serve(async (req) => {
       if (!course || !template) continue;
 
       // Calculate when the reminder should fire
-      const courseDateTime = new Date(`${course.date}T${course.time}`);
+      const courseDateTime = parseCourseDateTimeInHongKong(course.date, course.time);
       const reminderTime = new Date(courseDateTime);
       reminderTime.setDate(reminderTime.getDate() - reminder.days_before);
       reminderTime.setHours(reminderTime.getHours() - reminder.hours_before);
