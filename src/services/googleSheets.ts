@@ -211,7 +211,8 @@ export const googleSheets = {
 
   async exportToNewSheet(title: string, headers: string[], rows: string[][]): Promise<string> {
     const id = await this.createSpreadsheet(title);
-    await this.writeSheet(id, "Sheet1!A1", [headers, ...rows]);
+    const sheetName = await this.getFirstSheetName(id);
+    await this.writeSheet(id, `${sheetName}!A1`, [headers, ...rows]);
     return id;
   },
 };
