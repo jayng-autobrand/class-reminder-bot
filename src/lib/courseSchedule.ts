@@ -1,5 +1,10 @@
 import type { Course } from "@/types";
 
+/** Parse a date+time string as Hong Kong time (UTC+8) and return a Date */
+function parseAsHongKongTime(dateStr: string, timeStr: string): Date {
+  return new Date(`${dateStr}T${timeStr}+08:00`);
+}
+
 /**
  * Given a recurring course, compute all individual session dates.
  * Returns ISO date strings sorted ascending.
@@ -40,7 +45,7 @@ export function countCompletedSessions(course: Course): number {
 
   for (const dateStr of sessionDates) {
     const endTime = course.timeEnd || course.time || "23:59:59";
-    const sessionEnd = new Date(`${dateStr}T${endTime}`);
+    const sessionEnd = parseAsHongKongTime(dateStr, endTime);
     if (!isNaN(sessionEnd.getTime()) && sessionEnd < now) {
       completed++;
     }
@@ -66,7 +71,7 @@ export function getNextSessionDate(course: Course): string | null {
   const endTime = course.timeEnd || course.time || "23:59:59";
 
   for (const dateStr of dates) {
-    const sessionEnd = new Date(`${dateStr}T${endTime}`);
+    const sessionEnd = parseAsHongKongTime(dateStr, endTime);
     if (!isNaN(sessionEnd.getTime()) && sessionEnd >= now) {
       return dateStr;
     }
