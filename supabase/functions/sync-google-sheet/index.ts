@@ -154,7 +154,11 @@ Deno.serve(async (req) => {
         )
 
         if (newStudents.length > 0) {
-          await supabase.from('students').insert(newStudents)
+          const { error: insertErr } = await supabase.from('students').upsert(newStudents, {
+            onConflict: 'phone,user_id',
+            ignoreDuplicates: true,
+          })
+          if (insertErr) console.error('Insert students error:', insertErr.message)
         }
 
         // Update last_synced_at
