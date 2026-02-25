@@ -33,7 +33,7 @@ function isCourseExpired(course: Course): boolean {
     return course.completedSessions >= course.totalSessions;
   }
   const endTime = course.timeEnd || course.time || "00:00:00";
-  const courseDateTime = new Date(`${course.date}T${endTime}`);
+  const courseDateTime = new Date(`${course.date}T${endTime}+08:00`);
   return !Number.isNaN(courseDateTime.getTime()) && courseDateTime < new Date();
 }
 
