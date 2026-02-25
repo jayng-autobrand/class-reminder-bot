@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,7 +119,12 @@ const Login = () => {
               {loading ? (isSignUp ? "註冊中…" : "登入中…") : (isSignUp ? "註冊" : "登入")}
             </Button>
           </form>
-          <div className="mt-4 text-center">
+          <div className="mt-4 text-center space-y-2">
+            {!isSignUp && (
+              <Link to="/forgot-password" className="text-sm text-muted-foreground hover:text-foreground underline block">
+                忘記密碼？
+              </Link>
+            )}
             <button
               type="button"
               onClick={() => setIsSignUp(!isSignUp)}
